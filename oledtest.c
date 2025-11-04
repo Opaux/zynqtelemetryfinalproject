@@ -15,7 +15,7 @@ PmodOLED OLEDInst;
 int main() {
 	OLED_Begin(&OLEDInst, OLED_GPIO_ADDR, OLED_SPI_ADDR, orientation, invert);
 	//Disables automatic updating
-	OLED_SetCharUpdate(&myDevice, 0);
+	OLED_SetCharUpdate(&OLEDInst, 0);
 	OLED_SetCursor(&OLEDInst, 0, 0);
 	OLED_PutString(&OLEDInst, "PmodOLED");
 	OLED_SetCursor(&OLEDInst, 0, 1);

@@ -10,10 +10,12 @@
 #define OLED_SPI_ADDR XPAR_PMODOLED_0_AXI_LITE_SPI_BASEADDR
 #define OLED_GPIO_ADDR XPAR_PMODOLED_0_AXI_LITE_GPIO_BASEADDR
 #define NAV_SPI_ADDR XPAR_PMODNAV_0_AXI_LITE_SPI_BASEADDR
-#define NAV_GPIO_ADDR XPAR_PMODNAV_0_AXI_LITE_GPIO_BASEADDR;
+#define NAV_GPIO_ADDR XPAR_PMODNAV_0_AXI_LITE_GPIO_BASEADDR
 #define INTC_DEVICE_ID 		XPAR_PS7_SCUGIC_0_DEVICE_ID
 #define TMRCTR_DEVICE_ID		XPAR_TMRCTR_0_DEVICE_ID
 #define INTC_GPIO_INTERRUPT_ID XPAR_FABRIC_AXI_GPIO_0_IP2INTC_IRPT_INTR
+#define INTC_TMR_INTERRUPT_ID XPAR_FABRIC_AXI_TIMER_0_INTERRUPT_INTR
+
 // To change between PmodOLED and OnBoardOLED is to change Orientation
 const u8 orientation = 0x0; // Set up for Normal PmodOLED(false) vs normal
                             // Onboard OLED(true)
@@ -32,7 +34,7 @@ volatile int updateFlag;
 static int InterruptSystemSetup(XScuGic *XScuGicInstancePtr);
 static int IntcInitFunction(u16 DeviceId, XTmrCtr *TmrInstancePtr);
 static void TMR_Intr_Handler(void *CallBackRef, u8 TmrCtrNumber);
-static float celsToFah(float tempC);
+static void celsToFah(float tempC);
 
 int main() {
 	int status;
@@ -52,7 +54,7 @@ int main() {
 	while(1) {
 		if(updateFlag){
 			NAV_GetData(&NAVInst);
-			fahren = celsToFah(NAVInst.tempC);
+			celsToFah(NAVInst.tempC);
 			//Not enough space on the OLED to get the Z coordinate, but this is only a test
 			OLED_SetCursor(&OLEDInst, 0, 0);
 			snprintf(dataOut, sizeof(dataOut), "A:%.2f %.2f", NAVInst.acclData.X, NAVInst.acclData.Y);

@@ -48,15 +48,50 @@ int LSpi_Reset(void* virtualPtr) {
  * the data to/from the selected SPI slave. If the SPI device is configured to
  * be a slave, this function prepares the data to be sent/received when selected
  * by a master. For every byte sent, a byte is received. */
-int LSpi_Transfer(void* virtualPtr, uint8_t *SendBufPtr, uint8_t *RecvBufPtr, unsigned int ByteCount) {
+uint8_t LSpi_Transfer(void* virtualPtr, uint8_t sendByte) {
     uint32_t controlReg;
-    uint32_t GlobalIntrReg;
-    uint32_t StatusReg;
-    uint32_t Data = 0;
-    uint8_t  DataWidth;
     if (virtualPtr == NULL) {
         fprintf(stderr, "Linux_Spi_Transfer: Error, virtual_ptr is NULL.\n");
         return -EFAULT; // Return Linux error code
     }
-    while((LSpiReadReg(virtualPtr, LSP_SR_OFFSET))
+    // Wait for status to be ready and FIFO to be not full before transmission
+    while((LSpiReadReg(virtualPtr, LSP_SR_OFFSET)) & LSP_SR_TX_FULL_MASK);
+    // Load data into transmit register
+    LSpiWriteReg(virtualPtr, LSP_DTR_OFFSET, (uint32_t)sendByte);
+    // Start master transmitter to transmit data (inverse of inhibit mask)
+    controlReg = LSpiReadReg(virtualPtr, LSP_CR_OFFSET);
+    controlReg &= ~LSP_CR_TRANS_INHIBIT_MASK;
+    LSpiWriteReg(virtualPtr, LSP_CR_OFFSET, controlReg);
+    // Wait receive register to get data (transfer complete)
+    while((LSpiReadReg(virtualPtr, LSP_SR_OFFSET)) & LSP_SR_RX_EMPTY_MASK);
+    // Inhibit master transmitter to end transmission
+    controlReg = LSpiReadReg(virtualPtr, LSP_CR_OFFSET);
+    controlReg |= LSP_CR_TRANS_INHIBIT_MASK;
+    LSpiWriteReg(virtualPtr, LSP_CR_OFFSET, controlReg);
+    // Return data received from the transmission
+    return (uint8_t)LSpiReadReg(virtualPtr, LSP_DRR_OFFSET);
 }
+
+/* Selects or deselect the slave with which the master communicates. Each slave
+* that can be selected is represented in the slave select register by a bit.
+* The argument passed to this function is the bit mask with a 1 in the bit
+* position of the slave being selected. Only one slave can be selected.*/
+int LSpi_SetSlaveSelect(void* virtualPtr, uint8_t SlaveMask){
+    uint32_t controlReg;
+    int numAsserted;
+    int i;
+    if (virtualPtr == NULL) {
+        fprintf(stderr, "Linux_Spi_SetSlaveSelect: Error, virtual_ptr is NULL.\n");
+        return -EFAULT; // Return Linux error code
+    }
+    // Check if the transmitter is busy (transmitter not empty), cancel slave selection if busy
+    if ((LSpiReadReg(virtualPtr, LSP_SR_OFFSET) & LSP_SR_TX_EMPTY_MASK) == 0)
+    {
+        fprintf(stderr, "Transfer busy, try again later.\n");
+        return -EFAULT;
+    }
+    // Write inverse of slave mask to the slave selection register
+    LSpiWriteReg(virtualPtr, LSP_SSR_OFFSET, ~(uint32_t)SlaveMask);
+    return 0;
+}
+

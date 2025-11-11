@@ -24,4 +24,4 @@ int LSpi_Start(void* virtualPtr);
 int LSpi_Stop(void* virtualPtr);
 void LSpi_Reset(void* virtualPtr);
 int LSpi_SetSlaveSelect(void* virtualPtr, uint32_t SlaveMask);
-int LSpi_Transfer(void* virtualPtr, uint8_t *SendBufPtr, uint8_t *RecvBufPtr, unsigned int ByteCount);
+uint8_t LSpi_Transfer(void* virtualPtr, uint8_t sendByte);
